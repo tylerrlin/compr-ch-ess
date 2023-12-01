@@ -9,6 +9,6 @@ setup(
     license='MIT',
     install_requires=['pandas', 'numpy', 'chess', 'tensorflow>=2.0.0'],
     setup_requires=['pytest-runner'],
-    tests_require=['pytest'],
+    tests_require=['pytest', 'chess', 'pandas', 'numpy'],
     test_suite='tests',
 )
