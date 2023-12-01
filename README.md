@@ -1,1 +1,1 @@
-# chess-compression
+# Adaptive Chess PGN Compression - by Tyler Lin
