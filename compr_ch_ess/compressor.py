@@ -52,7 +52,7 @@ class Compressor:
         self.__engine_time = engine_time
         self.__mate_score = mate_score
 
-    def load_model_file(self, model: keras.Sequential) -> None:
+    def load_model_obj(self, model: keras.Sequential) -> None:
         """Loads the given model
 
         :param model: The model to load
@@ -62,7 +62,7 @@ class Compressor:
         """
         self._model = model
 
-    def load_model_obj(self, model_path: str):
+    def load_model_file(self, model_path: str):
         """Loads the model from the given path
 
         :param model_path: The path to load a pickled model from
