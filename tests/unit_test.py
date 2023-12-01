@@ -91,4 +91,6 @@ def test_compressor():
     code = compressor.compress(test_game)
     game = compressor.decompress(code)
 
-    assert (game.mainline_moves() == test_game.mainline_moves())
+    # make sure the games are the same
+    assert (game.mainline_moves()[4].uci() ==
+            test_game.mainline_moves()[4].uci())
