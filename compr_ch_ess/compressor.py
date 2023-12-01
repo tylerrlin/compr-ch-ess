@@ -243,8 +243,8 @@ class HuffmanTree:
         if node.left is None and node.right is None:
             self.codes[node.result] = code
             return
-        self.__traverse(node.left, code + "0")
-        self.__traverse(node.right, code + "1")
+        self.__encode_traverse(node.left, code + "0")
+        self.__encode_traverse(node.right, code + "1")
 
     def create_codes(self) -> None:
         """Traverses the Huffman tree and creates the codes
