@@ -52,7 +52,7 @@ class Compressor:
         self.__engine_time = engine_time
         self.__mate_score = mate_score
 
-    def load_model_obj(self, model: keras.Sequential) -> None:
+    def load_model_file(self, model: keras.Sequential) -> None:
         """Loads the given model
 
         :param model: The model to load
@@ -62,7 +62,7 @@ class Compressor:
         """
         self._model = model
 
-    def load_model(self, model_path: str):
+    def load_model_obj(self, model_path: str):
         """Loads the model from the given path
 
         :param model_path: The path to load a pickled model from
@@ -230,7 +230,7 @@ class HuffmanTree:
         # set the root
         self.__root = heap[0][1]
 
-    def __traverse(self, node: Node, code: str) -> None:
+    def __encode_traverse(self, node: Node, code: str) -> None:
         """Traverses the Huffman tree and creates the codes
 
         :param node: The node to traverse from
@@ -251,7 +251,7 @@ class HuffmanTree:
 
         :return: None
         """
-        self.__traverse(self.__root, "")
+        self.__encode_traverse(self.__root, "")
 
     def __decode_traverse(self, node: Node, code: str) -> tuple:
         """Traverses the Huffman tree and decodes the given code

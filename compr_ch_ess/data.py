@@ -58,6 +58,8 @@ class Data:
         :return: True if the game meets the filters, False otherwise
         :rtype: bool
         """
+        if filters is None:
+            return True
         for key in filters:
             if key not in game.headers():
                 raise Exception(f"Invalid filter: {key}")
@@ -89,9 +91,11 @@ class Data:
             analysis = engine.analyse(board, chess.engine.Limit(
                 depth=self.__engine_depth), multipv=board.legal_moves.count())
             # determine the engine's evaluation of the position
-            eval = analysis[0]["score"].relative.score(mate_score=self.__mate_score)
+            eval = analysis[0]["score"].relative.score(
+                mate_score=self.__mate_score)
             # determine the engine's rank of the move played
-            result = next(move["multipv"] for move in analysis if move["pv"][0] == played)
+            result = next(move["multipv"]
+                          for move in analysis if move["pv"][0] == played)
             # add the data to the list
             game_data.append(
                 {
@@ -108,7 +112,37 @@ class Data:
         engine.quit()
         return game_data
 
-    def build_dataframe(self, pgns: list) -> pd.DataFrame:
+    def build_dataframe_from_games(self, games: list) -> pd.DataFrame:
+        """Builds a dataframe from a given list of games
+
+        :param games: The list of games to build the dataframe from
+        :type games: list of chess.pgn.Game
+
+        dataframe columns:
+            - result: rank of the move played (determined by the engine)
+            - eval: evaluation of the position before the move was played
+            - move_number: the move number
+            - legal_moves: the possible moves from the position
+            - point_diff: the difference in points between the two players
+
+            ** both eval and point_diff are relative to the player who played the move
+
+        :return: The dataframe built from the games
+        :rtype: pd.DataFrame
+        """
+        # initialize the data list
+        data = []
+        for i, game in enumerate(games):
+            print(f"Analyzing game {i + 1} of {len(games)}")
+            data.extend(self.analyze_game(game))
+        # check if no games were found
+        if len(data) == 0:
+            raise Exception("No games to build the dataframe from")
+        # print success message and return
+        print("\nDataframe built successfully")
+        return pd.DataFrame(data)
+
+    def build_dataframe_from_strs(self, pgns: list) -> pd.DataFrame:
         """Builds a dataframe from a given list of PGNs
 
         :param pgns: The list of PGNs to build the dataframe from
@@ -133,7 +167,7 @@ class Data:
             if game is None:
                 raise Exception(f"Invalid PGN given (index: {i}):\n\n{pgn}")
             print(f"Analyzing game {i + 1} of {len(pgns)}")
-            data.extend(self._analyze_game(game))
+            data.extend(self.analyze_game(game))
         # check if no games were found
         if len(data) == 0:
             raise Exception("No games to build the dataframe from")
@@ -141,15 +175,12 @@ class Data:
         print("\nDataframe built successfully")
         return pd.DataFrame(data)
 
-    def build_dataframe(self, pngs_path: str, num_games: int, filters: dict = {
-        "min_rating": 0,
-        "max_rating": 3000,
-    }) -> pd.DataFrame:
+    def build_dataframe_from_path(self, pngs_path: str, num_games: int, filters: dict = None) -> pd.DataFrame:
         """Builds a dataframe from a given path to a PGN file
 
         :param pngs_path: The path to the PGN file
         :type pngs_path: str
-        :param filters: The filters to apply to the PGN file (can be PGN headers)
+        :param filters: The filters to apply to the PGN file (PGN headers)
                         ex. {"TimeControl": "180+2", "White": "username"}
         :type filters: dict
 
@@ -170,17 +201,10 @@ class Data:
         with open(pngs_path) as pgn_file:
             game = chess.pgn.read_game(pgn_file)
             while game is not None and len(data) < num_games:
-                # check if the game meets rating filters
-                if (game.headers()["WhiteElo"] + game.headers()["BlackElo"]) / 2 >= filters["min_rating"] and (game.headers()["WhiteElo"] + game.headers()["BlackElo"]) / 2 <= filters["max_rating"]:
-                    filters = filters.pop("min_rating")
-                    filters = filters.pop("max_rating")
-                else:
-                    game = chess.pgn.read_game(pgn_file)
-                    continue
                 # check if the game meets other filters
                 if self._meets_filters(game, filters):
                     print(f"Analyzing game {len(data) + 1} of {num_games}")
-                    data.extend(self._analyze_game(game))
+                    data.extend(self.analyze_game(game))
                 game = chess.pgn.read_game(pgn_file)
             # print number of games found
             if len(data) < num_games:
@@ -204,29 +228,3 @@ class Data:
         """
         dataframe.to_csv(path, index=False)
         print(f"Dataframe saved succesfully to {path}")
-
-    def split_dataframe(self, dataframe: pd.DataFrame, train_size: float, test_size: float, val_size: float) -> tuple:
-        """Splits the given dataframe into training, testing, and validation sets
-
-        :param dataframe: The dataframe to split
-        :type dataframe: pd.DataFrame
-        :param train_size: The size of the training set
-        :type train_size: float
-        :param test_size: The size of the testing set
-        :type test_size: float
-        :param val_size: The size of the validation set
-        :type val_size: float
-
-        :return: The training, testing, and validation sets
-        :rtype: tuple
-        """
-        np.random.seed(1231)
-        # check if the sizes are valid
-        if train_size + test_size + val_size > 1.0:
-            raise Exception(
-                f"Invalid split sizes: train_size + test_size + val_size != 1: {train_size + test_size + val_size}")
-        # split the dataframe
-        train, test, val = np.split(dataframe.sample(frac=1), [int(
-            train_size * len(dataframe)), int((train_size + test_size) * len(dataframe))])
-        # return the split dataframes
-        return train, test, val
