@@ -9,50 +9,61 @@
     using Keras.
 """
 
-from compr_ch_ess import Compressor, Model, Data
-import chess
+from compr_ch_ess import Model, Data
 import chess.pgn
 
-import numpy as np
-import pandas as pd
-import keras
+NUM_GAMES = 100
 
-import pandas as pd
+TIME_CONTROL = "600+0"
 
-import sys
+ENGINE_PATH = "/opt/homebrew/bin/stockfish"
+
+PGN_PATH = "scripts/pgns/games.pgn"
+
+MIN_RATING = 2000
+MAX_RATING = 2200
 
 if __name__ == "__main__":
-    # # Configure the data
-    # data = pd.read_csv("tests/data.csv")
-    # data.drop("Unnamed: 0", axis=1, inplace=True)
-    # train = data.iloc[0:20]
-    # val = data.iloc[20:40]
-    # test = data.iloc[40:60]
 
-    # test = test.drop("result", axis=1)
+    output_df_path = f"scripts/data/comprchess_{MIN_RATING}_{MAX_RATING}_df.csv"
+    output_model_path = f"scripts/models/comprchess_{MIN_RATING}_{MAX_RATING}_pkl"
 
-    # # Configure the model
-    # model = Model()
-    # model.build(train, val)
-    # model.save("tests/model.h5")
+    print("\n\n" + "~" * 50)
+    print("\t\t build_model.py")
+    print("~" * 50 + "\n\n")
 
-    # m = model.get_model()
-    # print(test.shape)
-    # print(np.array([[1, 2, 3, 4]]).shape)
-    # print(m.predict(test))
+    games = []
+    pgn_data = open(PGN_PATH)
+    while len(games) < NUM_GAMES:
+        game = chess.pgn.read_game(pgn_data)
+        if ((int(game.headers["WhiteElo"]) + int(game.headers["BlackElo"])) / 2 >= MIN_RATING and (int(game.headers["WhiteElo"]) + int(game.headers["BlackElo"])) / 2 <= MAX_RATING and game.headers["TimeControl"] == TIME_CONTROL):
+            games.append(game)
 
-    # --------------------------
+    print(f"Loaded {len(games)} games")
+    print("\nBuilding dataframe...\n")
 
-    compressor = Compressor("/opt/homebrew/bin/stockfish")
-    compressor.load_model("tests/model.h5")
+    data = Data(ENGINE_PATH)
+    dataframe = data.build_dataframe_from_games(games)
 
-    pgn = open("tests/test.pgn")
-    game = chess.pgn.read_game(pgn)
+    print("\nSaving dataframe...\n")
+    data.save_dataframe(dataframe, output_df_path)
 
-    code = compressor.compress(game)
-    print(len(code))
-    print(code)
+    print("\nTraining model...\n")
 
-    game = compressor.decompress(code)
-    for move in game.mainline_moves():
-        print(move.uci())
+    num_train = int(len(dataframe) * 0.8)
+    if num_train % 2 == 1:
+        num_train += 1
+
+    train_data = dataframe.iloc[:int((num_train / 2))]
+    val_data = dataframe.iloc[int((num_train / 2)):num_train]
+    test_data = dataframe.iloc[num_train:]
+
+    model = Model()
+    model.build(train_data, val_data)
+
+    print("\nEvaluating model...\n")
+
+    print(model.evaluate(test_data))
+
+    print("\nSaving model...\n")
+    model.save(output_model_path)
