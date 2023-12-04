@@ -3,7 +3,7 @@
 ## Introduction
 
 COMPR\[CH]ESS is an innovative approach to lossless chess game compression, seamlessly blending chess engines, machine learning, and Huffman Coding. By training models that predict player moves at a given rating range, this program can adaptively
-encode/decode chess games.
+encode/decode chess games efficiently.
 
 ## Getting Started
 
